@@ -76,7 +76,7 @@ export function Dashboard() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <img 
-                src="/logo.png" 
+                src="/principal.png" 
                 alt="Influa Conference 2025" 
                 className="h-12 w-auto mr-4"
                 style={{ filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))' }}
