@@ -142,7 +142,7 @@ export function RegistrationPage() {
           <div className="text-center">
             <div className="flex items-center justify-center mb-6">
               <img 
-                src="/logo.png" 
+                src="/principal.png" 
                 alt="Influa Conference 2025" 
                 className="h-20 w-auto"
                 style={{ filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))' }}
