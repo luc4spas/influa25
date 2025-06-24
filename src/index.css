@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes float {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-15px) rotate(3deg);
+  }
+  66% {
+    transform: translateY(-8px) rotate(-2deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+.animate-float {
+  animation: float 8s ease-in-out infinite;
+}
+
+/* Add different animation delays and durations for variety */
+.animate-float:nth-child(2) {
+  animation-delay: -2s;
+  animation-duration: 9s;
+}
+
+.animate-float:nth-child(3) {
+  animation-delay: -4s;
+  animation-duration: 7s;
+}
+
+.animate-float:nth-child(4) {
+  animation-delay: -1s;
+  animation-duration: 10s;
+}
+
+.animate-float:nth-child(5) {
+  animation-delay: -3s;
+  animation-duration: 8.5s;
+}
+
+.animate-float:nth-child(6) {
+  animation-delay: -5s;
+  animation-duration: 9.5s;
+}
+
+.animate-float:nth-child(7) {
+  animation-delay: -2.5s;
+  animation-duration: 7.5s;
+}
+
+.animate-float:nth-child(8) {
+  animation-delay: -4.5s;
+  animation-duration: 8s;
+}
+
+.animate-float:nth-child(9) {
+  animation-delay: -1.5s;
+  animation-duration: 9s;
+}
+
+.animate-float:nth-child(10) {
+  animation-delay: -3.5s;
+  animation-duration: 8.5s;
+}
+
+.animate-float:nth-child(11) {
+  animation-delay: -5.5s;
+  animation-duration: 7s;
+}
+
+.animate-float:nth-child(12) {
+  animation-delay: -2.8s;
+  animation-duration: 10s;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #8B5CF6, #F59E0B);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #7C3AED, #D97706);
+}
