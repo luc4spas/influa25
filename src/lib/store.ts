@@ -11,6 +11,9 @@ interface Registration {
   status: string;
   shirt_size: string;
   guardian_name?: string;
+  payment_method?: string;
+  payment_date?: string;
+  payment_notes?: string;
 }
 
 interface DashboardStore {
@@ -21,10 +24,18 @@ interface DashboardStore {
   error: string | null;
   searchTerm: string;
   statusFilter: string;
+  currentPage: number;
+  itemsPerPage: number;
+  totalPages: number;
   setSearchTerm: (term: string) => void;
   setStatusFilter: (status: string) => void;
+  setCurrentPage: (page: number) => void;
+  setItemsPerPage: (items: number) => void;
   fetchRegistrations: () => Promise<void>;
+  updatePaymentStatus: (id: string, status: string, paymentMethod?: string, notes?: string) => Promise<void>;
   exportToCSV: () => void;
+  getPaginatedRegistrations: () => Registration[];
+  calculateAndSetTotalPages: () => void;
 }
 
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
@@ -35,9 +46,39 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   error: null,
   searchTerm: '',
   statusFilter: 'all',
+  currentPage: 1,
+  itemsPerPage: 10,
+  totalPages: 1,
 
-  setSearchTerm: (term) => set({ searchTerm: term }),
-  setStatusFilter: (status) => set({ statusFilter: status }),
+  setSearchTerm: (term) => {
+    set({ searchTerm: term });
+    get().calculateAndSetTotalPages();
+  },
+  setStatusFilter: (status) => {
+    set({ statusFilter: status });
+    get().calculateAndSetTotalPages();
+  },
+  setCurrentPage: (page) => set({ currentPage: page }),
+  setItemsPerPage: (items) => {
+    set({ itemsPerPage: items, currentPage: 1 });
+    get().calculateAndSetTotalPages();
+  },
+
+  calculateAndSetTotalPages: () => {
+    const { registrations, searchTerm, statusFilter, itemsPerPage } = get();
+    
+    // Filter registrations
+    const filteredRegistrations = registrations.filter(reg => {
+      const matchesSearch = reg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          reg.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || reg.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+    // Calculate total pages
+    const totalPages = Math.ceil(filteredRegistrations.length / itemsPerPage);
+    set({ totalPages });
+  },
 
   fetchRegistrations: async () => {
     set({ loading: true, error: null });
@@ -80,6 +121,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         confirmedPayments: confirmed,
         loading: false
       });
+
+      // Calculate total pages after fetching data
+      get().calculateAndSetTotalPages();
     } catch (error) {
       console.error('Erro ao carregar registros:', error);
       set({ 
@@ -100,7 +144,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       return;
     }
 
-    const headers = ['Nome', 'Email', 'Telefone', 'Idade', 'Tamanho da Camisa', 'Responsável', 'Status', 'Data de Registro'];
+    const headers = ['Nome', 'Email', 'Telefone', 'Idade', 'Tamanho da Camisa', 'Responsável', 'Status', 'Método de Pagamento', 'Data do Pagamento', 'Observações', 'Data de Registro'];
     const csvData = registrations.map(reg => [
       reg.name,
       reg.email,
@@ -109,6 +153,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       reg.shirt_size || 'M',
       reg.guardian_name || '',
       reg.status === 'confirmed' ? 'Confirmado' : 'Pendente',
+      reg.payment_method || '',
+      reg.payment_date ? new Date(reg.payment_date).toLocaleDateString('pt-BR') : '',
+      reg.payment_notes || '',
       new Date(reg.created_at).toLocaleDateString('pt-BR')
     ]);
 
@@ -125,5 +172,69 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  },
+
+  updatePaymentStatus: async (id: string, status: string, paymentMethod?: string, notes?: string) => {
+    try {
+      const updateData: any = {
+        status,
+        payment_date: status === 'confirmed' ? new Date().toISOString() : null,
+        payment_method: status === 'confirmed' ? paymentMethod : null,
+        payment_notes: notes || null
+      };
+
+      const { error } = await supabase
+        .from('registrations')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Atualizar o estado local
+      const { registrations } = get();
+      const updatedRegistrations = registrations.map(reg => 
+        reg.id === id 
+          ? { 
+              ...reg, 
+              status, 
+              payment_method: updateData.payment_method,
+              payment_date: updateData.payment_date,
+              payment_notes: updateData.payment_notes
+            }
+          : reg
+      );
+
+      const confirmed = updatedRegistrations.filter(reg => reg.status === 'confirmed').length;
+
+      set({
+        registrations: updatedRegistrations,
+        confirmedPayments: confirmed
+      });
+
+      // Recalculate total pages after updating data
+      get().calculateAndSetTotalPages();
+
+    } catch (error) {
+      console.error('Erro ao atualizar status de pagamento:', error);
+      throw error;
+    }
+  },
+
+  getPaginatedRegistrations: () => {
+    const { registrations, searchTerm, statusFilter, currentPage, itemsPerPage } = get();
+    
+    // Filtrar registros
+    const filteredRegistrations = registrations.filter(reg => {
+      const matchesSearch = reg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          reg.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || reg.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+    // Paginar resultados
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    
+    return filteredRegistrations.slice(startIndex, endIndex);
   }
 }));

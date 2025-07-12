@@ -156,9 +156,55 @@ export function WelcomePage() {
                 </div>
               </div>
 
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+              <div className="bg-green-50 border-l-4 border-green-400 p-6 rounded-r-lg">
+                <h4 className="text-green-800 font-semibold mb-4 text-lg">
+                  💰 Informações de Pagamento
+                </h4>
+                
+                <div className="space-y-4">
+                  <p className="text-green-800">
+                    <strong>Valor:</strong> R$ 100,00 (Camisa + Lanche incluso)
+                  </p>
+                  
+                  <div className="bg-white p-4 rounded-lg border border-green-200">
+                    <p className="text-green-800 font-medium mb-3">
+                      Pague via PIX da Igreja:
+                    </p>
+                    
+                    <div className="flex flex-col md:flex-row items-center gap-4">
+                      <div className="flex-shrink-0">
+                        <img 
+                          src="/qrcode-pix.png" 
+                          alt="QR Code PIX" 
+                          className="w-32 h-32 border border-gray-200 rounded-lg"
+                        />
+                      </div>
+                      
+                      <div className="flex-1 w-full">
+                        <p className="text-sm text-gray-600 mb-2">
+                          Ou copie e cole o código PIX:
+                        </p>
+                        <div className="bg-gray-50 p-3 rounded-lg border">
+                          <code className="text-xs break-all text-gray-800 font-mono">
+                            00020126360014BR.GOV.BCB.PIX0114234289410001265204000053039865406100.005802BR5901N6001C62100506INFLUA6304321A
+                          </code>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText('00020126360014BR.GOV.BCB.PIX0114234289410001265204000053039865406100.005802BR5901N6001C62100506INFLUA6304321A');
+                            alert('Código PIX copiado!');
+                          }}
+                          className="mt-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          📋 Copiar Código PIX
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
                 <p className="text-yellow-800">
-                  <strong>Próximos passos:</strong> Fique atento ao seu email para mais informações sobre pagamento e detalhes do evento.
+                  <strong>Próximos passos:</strong> Realize o pagamento via PIX e aguarde a confirmação. Mais detalhes do evento serão enviados em breve.
                 </p>
               </div>
             </div>
