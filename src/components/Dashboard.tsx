@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, LogOut, Search, Download, 
-  TrendingUp, Clock, Shirt, Edit3
+  TrendingUp, Clock, Shirt, Edit3, Package, RefreshCw
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, 
@@ -11,6 +11,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useDashboardStore } from '../lib/store';
 import { PaymentModal } from './PaymentModal';
+import { ShirtDeliveryModal } from './ShirtDeliveryModal';
 import { PaginationControls } from './PaginationControls';
 import toast from 'react-hot-toast';
 
@@ -18,10 +19,12 @@ export function Dashboard() {
   const navigate = useNavigate();
   const [selectedRegistration, setSelectedRegistration] = React.useState<any>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = React.useState(false);
+  const [isShirtModalOpen, setIsShirtModalOpen] = React.useState(false);
   const { 
     registrations, 
     totalRegistrations,
     confirmedPayments,
+    deliveredShirts,
     loading,
     searchTerm,
     statusFilter,
@@ -34,6 +37,7 @@ export function Dashboard() {
     setItemsPerPage,
     fetchRegistrations,
     updatePaymentStatus,
+    updateShirtDelivery,
     exportToCSV,
     getPaginatedRegistrations
   } = useDashboardStore();
@@ -57,6 +61,15 @@ export function Dashboard() {
     }
   };
 
+  const handleRefresh = async () => {
+    toast.loading('Atualizando dados...', { id: 'refresh' });
+    try {
+      await fetchRegistrations();
+      toast.success('Dados atualizados com sucesso!', { id: 'refresh' });
+    } catch (error) {
+      toast.error('Erro ao atualizar dados.', { id: 'refresh' });
+    }
+  };
   const handleOpenPaymentModal = (registration: any) => {
     setSelectedRegistration(registration);
     setIsPaymentModalOpen(true);
@@ -67,6 +80,15 @@ export function Dashboard() {
     setIsPaymentModalOpen(false);
   };
 
+  const handleOpenShirtModal = (registration: any) => {
+    setSelectedRegistration(registration);
+    setIsShirtModalOpen(true);
+  };
+
+  const handleCloseShirtModal = () => {
+    setSelectedRegistration(null);
+    setIsShirtModalOpen(false);
+  };
   const handleUpdatePayment = async (id: string, status: string, paymentMethod?: string, notes?: string) => {
     try {
       await updatePaymentStatus(id, status, paymentMethod, notes);
@@ -81,6 +103,19 @@ export function Dashboard() {
     }
   };
 
+  const handleUpdateShirtDelivery = async (id: string, delivered: boolean, notes?: string) => {
+    try {
+      await updateShirtDelivery(id, delivered, notes);
+      toast.success(
+        delivered 
+          ? 'Camisa marcada como entregue!' 
+          : 'Camisa marcada como não entregue!'
+      );
+    } catch (error) {
+      toast.error('Erro ao atualizar entrega da camisa.');
+      throw error;
+    }
+  };
   // Obter registros paginados
   const paginatedRegistrations = getPaginatedRegistrations();
   
@@ -144,7 +179,7 @@ export function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
             <div className="flex items-center gap-4">
               <Users className="w-12 h-12 text-purple-500" />
@@ -175,6 +210,15 @@ export function Dashboard() {
             </div>
           </div>
 
+          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-indigo-500">
+            <div className="flex items-center gap-4">
+              <Package className="w-12 h-12 text-indigo-500" />
+              <div>
+                <p className="text-sm text-gray-600">Camisas Entregues</p>
+                <p className="text-2xl font-bold text-gray-900">{deliveredShirts}</p>
+              </div>
+            </div>
+          </div>
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
             <div className="flex items-center gap-4">
               <Users className="w-12 h-12 text-blue-500" />
@@ -256,6 +300,14 @@ export function Dashboard() {
                 </select>
 
                 <button
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                  Atualizar
+                </button>
+                <button
                   onClick={exportToCSV}
                   className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg"
                 >
@@ -302,6 +354,9 @@ export function Dashboard() {
                       Pagamento
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Entrega
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Data
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -312,7 +367,7 @@ export function Dashboard() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center">
+                      <td colSpan={9} className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
                           <span className="ml-2">Carregando...</span>
@@ -321,7 +376,7 @@ export function Dashboard() {
                     </tr>
                   ) : paginatedRegistrations.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                         {filteredTotal === 0 ? 'Nenhum registro encontrado' : 'Nenhum registro nesta página'}
                       </td>
                     </tr>
@@ -377,17 +432,42 @@ export function Dashboard() {
                             </div>
                           )}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            registration.shirt_delivered
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {registration.shirt_delivered ? 'Entregue' : 'Pendente'}
+                          </span>
+                          {registration.shirt_delivery_date && (
+                            <div className="text-gray-500 text-xs mt-1">
+                              {new Date(registration.shirt_delivery_date).toLocaleDateString('pt-BR')}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(registration.created_at).toLocaleDateString('pt-BR')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            onClick={() => handleOpenPaymentModal(registration)}
-                            className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-purple-700 bg-purple-100 hover:bg-purple-200 transition-colors duration-200"
-                          >
-                            <Edit3 className="w-3 h-3 mr-1" />
-                            Gerenciar
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleOpenPaymentModal(registration)}
+                              className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-purple-700 bg-purple-100 hover:bg-purple-200 transition-colors duration-200"
+                              title="Gerenciar Pagamento"
+                            >
+                              <Edit3 className="w-3 h-3 mr-1" />
+                              Pag.
+                            </button>
+                            <button
+                              onClick={() => handleOpenShirtModal(registration)}
+                              className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors duration-200"
+                              title="Gerenciar Entrega de Camisa"
+                            >
+                              <Package className="w-3 h-3 mr-1" />
+                              Camisa
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -417,6 +497,15 @@ export function Dashboard() {
           />
         )}
       </main>
+        {/* Shirt Delivery Modal */}
+        {selectedRegistration && (
+          <ShirtDeliveryModal
+            isOpen={isShirtModalOpen}
+            onClose={handleCloseShirtModal}
+            registration={selectedRegistration}
+            onUpdateDelivery={handleUpdateShirtDelivery}
+          />
+        )}
     </div>
   );
 }

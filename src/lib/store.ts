@@ -14,12 +14,16 @@ interface Registration {
   payment_method?: string;
   payment_date?: string;
   payment_notes?: string;
+  shirt_delivered?: boolean;
+  shirt_delivery_date?: string;
+  shirt_delivery_notes?: string;
 }
 
 interface DashboardStore {
   registrations: Registration[];
   totalRegistrations: number;
   confirmedPayments: number;
+  deliveredShirts: number;
   loading: boolean;
   error: string | null;
   searchTerm: string;
@@ -33,6 +37,7 @@ interface DashboardStore {
   setItemsPerPage: (items: number) => void;
   fetchRegistrations: () => Promise<void>;
   updatePaymentStatus: (id: string, status: string, paymentMethod?: string, notes?: string) => Promise<void>;
+  updateShirtDelivery: (id: string, delivered: boolean, notes?: string) => Promise<void>;
   exportToCSV: () => void;
   getPaginatedRegistrations: () => Registration[];
   calculateAndSetTotalPages: () => void;
@@ -42,6 +47,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   registrations: [],
   totalRegistrations: 0,
   confirmedPayments: 0,
+  deliveredShirts: 0,
   loading: false,
   error: null,
   searchTerm: '',
@@ -108,17 +114,20 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
           registrations: [],
           totalRegistrations: 0,
           confirmedPayments: 0,
+          deliveredShirts: 0,
           loading: false
         });
         return;
       }
 
       const confirmed = data.filter(reg => reg.status === 'confirmed').length;
+      const delivered = data.filter(reg => reg.shirt_delivered === true).length;
 
       set({
         registrations: data,
         totalRegistrations: data.length,
         confirmedPayments: confirmed,
+        deliveredShirts: delivered,
         loading: false
       });
 
@@ -131,7 +140,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         loading: false,
         registrations: [],
         totalRegistrations: 0,
-        confirmedPayments: 0
+        confirmedPayments: 0,
+        deliveredShirts: 0
       });
     }
   },
@@ -144,7 +154,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       return;
     }
 
-    const headers = ['Nome', 'Email', 'Telefone', 'Idade', 'Tamanho da Camisa', 'Responsável', 'Status', 'Método de Pagamento', 'Data do Pagamento', 'Observações', 'Data de Registro'];
+    const headers = ['Nome', 'Email', 'Telefone', 'Idade', 'Tamanho da Camisa', 'Responsável', 'Status', 'Método de Pagamento', 'Data do Pagamento', 'Observações', 'Camisa Entregue', 'Data da Entrega', 'Obs. Entrega', 'Data de Registro'];
     const csvData = registrations.map(reg => [
       reg.name,
       reg.email,
@@ -156,6 +166,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       reg.payment_method || '',
       reg.payment_date ? new Date(reg.payment_date).toLocaleDateString('pt-BR') : '',
       reg.payment_notes || '',
+      reg.shirt_delivered ? 'Sim' : 'Não',
+      reg.shirt_delivery_date ? new Date(reg.shirt_delivery_date).toLocaleDateString('pt-BR') : '',
+      reg.shirt_delivery_notes || '',
       new Date(reg.created_at).toLocaleDateString('pt-BR')
     ]);
 
@@ -220,6 +233,49 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     }
   },
 
+  updateShirtDelivery: async (id: string, delivered: boolean, notes?: string) => {
+    try {
+      const updateData: any = {
+        shirt_delivered: delivered,
+        shirt_delivery_date: delivered ? new Date().toISOString() : null,
+        shirt_delivery_notes: notes || null
+      };
+
+      const { error } = await supabase
+        .from('registrations')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Atualizar o estado local
+      const { registrations } = get();
+      const updatedRegistrations = registrations.map(reg => 
+        reg.id === id 
+          ? { 
+              ...reg, 
+              shirt_delivered: delivered,
+              shirt_delivery_date: updateData.shirt_delivery_date,
+              shirt_delivery_notes: updateData.shirt_delivery_notes
+            }
+          : reg
+      );
+
+      const delivered_count = updatedRegistrations.filter(reg => reg.shirt_delivered === true).length;
+
+      set({
+        registrations: updatedRegistrations,
+        deliveredShirts: delivered_count
+      });
+
+      // Recalculate total pages after updating data
+      get().calculateAndSetTotalPages();
+
+    } catch (error) {
+      console.error('Erro ao atualizar entrega de camisa:', error);
+      throw error;
+    }
+  },
   getPaginatedRegistrations: () => {
     const { registrations, searchTerm, statusFilter, currentPage, itemsPerPage } = get();
     
