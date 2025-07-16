@@ -14,16 +14,31 @@ interface Registration {
   payment_method?: string;
   payment_date?: string;
   payment_notes?: string;
+  payment_amount?: number;
+  payment_bank?: string;
   shirt_delivered?: boolean;
   shirt_delivery_date?: string;
   shirt_delivery_notes?: string;
 }
 
+interface Expense {
+  id: string;
+  created_at: string;
+  amount: number;
+  category: string;
+  description: string;
+  receipt_url?: string;
+  receipt_filename?: string;
+}
+
 interface DashboardStore {
   registrations: Registration[];
+  expenses: Expense[];
   totalRegistrations: number;
   confirmedPayments: number;
   deliveredShirts: number;
+  totalRevenue: number;
+  totalExpenses: number;
   loading: boolean;
   error: string | null;
   searchTerm: string;
@@ -36,8 +51,12 @@ interface DashboardStore {
   setCurrentPage: (page: number) => void;
   setItemsPerPage: (items: number) => void;
   fetchRegistrations: () => Promise<void>;
-  updatePaymentStatus: (id: string, status: string, paymentMethod?: string, notes?: string) => Promise<void>;
+  fetchExpenses: () => Promise<void>;
+  updatePaymentStatus: (id: string, status: string, paymentMethod?: string, notes?: string, amount?: number, bank?: string) => Promise<void>;
   updateShirtDelivery: (id: string, delivered: boolean, notes?: string) => Promise<void>;
+  addExpense: (expense: Omit<Expense, 'id' | 'created_at'>) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
+  updateExpense: (id: string, expense: Omit<Expense, 'id' | 'created_at'>) => Promise<void>;
   exportToCSV: () => void;
   getPaginatedRegistrations: () => Registration[];
   calculateAndSetTotalPages: () => void;
@@ -45,9 +64,12 @@ interface DashboardStore {
 
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
   registrations: [],
+  expenses: [],
   totalRegistrations: 0,
   confirmedPayments: 0,
   deliveredShirts: 0,
+  totalRevenue: 0,
+  totalExpenses: 0,
   loading: false,
   error: null,
   searchTerm: '',
@@ -122,12 +144,16 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
 
       const confirmed = data.filter(reg => reg.status === 'confirmed').length;
       const delivered = data.filter(reg => reg.shirt_delivered === true).length;
+      const revenue = data
+        .filter(reg => reg.status === 'confirmed' && reg.payment_amount)
+        .reduce((sum, reg) => sum + (reg.payment_amount || 0), 0);
 
       set({
         registrations: data,
         totalRegistrations: data.length,
         confirmedPayments: confirmed,
         deliveredShirts: delivered,
+        totalRevenue: revenue,
         loading: false
       });
 
@@ -146,6 +172,26 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     }
   },
 
+  fetchExpenses: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const totalExpenses = data?.reduce((sum, expense) => sum + expense.amount, 0) || 0;
+
+      set({
+        expenses: data || [],
+        totalExpenses
+      });
+    } catch (error) {
+      console.error('Erro ao carregar despesas:', error);
+    }
+  },
+
   exportToCSV: () => {
     const { registrations } = get();
     
@@ -154,7 +200,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       return;
     }
 
-    const headers = ['Nome', 'Email', 'Telefone', 'Idade', 'Tamanho da Camisa', 'Responsável', 'Status', 'Método de Pagamento', 'Data do Pagamento', 'Observações', 'Camisa Entregue', 'Data da Entrega', 'Obs. Entrega', 'Data de Registro'];
+    const headers = ['Nome', 'Email', 'Telefone', 'Idade', 'Tamanho da Camisa', 'Responsável', 'Status', 'Método de Pagamento', 'Valor Pago', 'Banco', 'Data do Pagamento', 'Observações', 'Camisa Entregue', 'Data da Entrega', 'Obs. Entrega', 'Data de Registro'];
     const csvData = registrations.map(reg => [
       reg.name,
       reg.email,
@@ -164,6 +210,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       reg.guardian_name || '',
       reg.status === 'confirmed' ? 'Confirmado' : 'Pendente',
       reg.payment_method || '',
+      reg.payment_amount ? `R$ ${reg.payment_amount.toFixed(2)}` : '',
+      reg.payment_bank || '',
       reg.payment_date ? new Date(reg.payment_date).toLocaleDateString('pt-BR') : '',
       reg.payment_notes || '',
       reg.shirt_delivered ? 'Sim' : 'Não',
@@ -187,13 +235,15 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     document.body.removeChild(link);
   },
 
-  updatePaymentStatus: async (id: string, status: string, paymentMethod?: string, notes?: string) => {
+  updatePaymentStatus: async (id: string, status: string, paymentMethod?: string, notes?: string, amount?: number, bank?: string) => {
     try {
       const updateData: any = {
         status,
         payment_date: status === 'confirmed' ? new Date().toISOString() : null,
         payment_method: status === 'confirmed' ? paymentMethod : null,
-        payment_notes: notes || null
+        payment_notes: notes || null,
+        payment_amount: status === 'confirmed' ? amount : null,
+        payment_bank: status === 'confirmed' ? bank : null
       };
 
       const { error } = await supabase
@@ -212,16 +262,22 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
               status, 
               payment_method: updateData.payment_method,
               payment_date: updateData.payment_date,
-              payment_notes: updateData.payment_notes
+              payment_notes: updateData.payment_notes,
+              payment_amount: updateData.payment_amount,
+              payment_bank: updateData.payment_bank
             }
           : reg
       );
 
       const confirmed = updatedRegistrations.filter(reg => reg.status === 'confirmed').length;
+      const revenue = updatedRegistrations
+        .filter(reg => reg.status === 'confirmed' && reg.payment_amount)
+        .reduce((sum, reg) => sum + (reg.payment_amount || 0), 0);
 
       set({
         registrations: updatedRegistrations,
-        confirmedPayments: confirmed
+        confirmedPayments: confirmed,
+        totalRevenue: revenue
       });
 
       // Recalculate total pages after updating data
@@ -276,6 +332,75 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       throw error;
     }
   },
+
+  addExpense: async (expense: Omit<Expense, 'id' | 'created_at'>) => {
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .insert([expense]);
+
+      if (error) throw error;
+
+      // Recarregar despesas
+      await get().fetchExpenses();
+    } catch (error) {
+      console.error('Erro ao adicionar despesa:', error);
+      throw error;
+    }
+  },
+
+  deleteExpense: async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      const { expenses } = get();
+      const updatedExpenses = expenses.filter(expense => expense.id !== id);
+      const totalExpenses = updatedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+      set({
+        expenses: updatedExpenses,
+        totalExpenses
+      });
+    } catch (error) {
+      console.error('Erro ao deletar despesa:', error);
+      throw error;
+    }
+  },
+
+  updateExpense: async (id: string, expenseData: Omit<Expense, 'id' | 'created_at'>) => {
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .update(expenseData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      const { expenses } = get();
+      const updatedExpenses = expenses.map(expense => 
+        expense.id === id 
+          ? { ...expense, ...expenseData }
+          : expense
+      );
+      const totalExpenses = updatedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+      set({
+        expenses: updatedExpenses,
+        totalExpenses
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar despesa:', error);
+      throw error;
+    }
+  },
+
   getPaginatedRegistrations: () => {
     const { registrations, searchTerm, statusFilter, currentPage, itemsPerPage } = get();
     

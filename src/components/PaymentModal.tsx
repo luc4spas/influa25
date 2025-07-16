@@ -9,12 +9,16 @@ interface PaymentModalProps {
     name: string;
     email: string;
     status: string;
+    payment_amount?: number;
+    payment_bank?: string;
   };
-  onUpdatePayment: (id: string, status: string, paymentMethod?: string, notes?: string) => Promise<void>;
+  onUpdatePayment: (id: string, status: string, paymentMethod?: string, notes?: string, amount?: number, bank?: string) => Promise<void>;
 }
 
 export function PaymentModal({ isOpen, onClose, registration, onUpdatePayment }: PaymentModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<string>('pix');
+  const [paymentAmount, setPaymentAmount] = useState<string>(registration.payment_amount?.toString() || '100');
+  const [paymentBank, setPaymentBank] = useState<string>(registration.payment_bank || '');
   const [notes, setNotes] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
@@ -23,7 +27,8 @@ export function PaymentModal({ isOpen, onClose, registration, onUpdatePayment }:
   const handleConfirmPayment = async () => {
     setLoading(true);
     try {
-      await onUpdatePayment(registration.id, 'confirmed', paymentMethod, notes);
+      const amount = parseFloat(paymentAmount) || 0;
+      await onUpdatePayment(registration.id, 'confirmed', paymentMethod, notes, amount, paymentBank);
       onClose();
       setNotes('');
     } catch (error) {
@@ -109,6 +114,62 @@ export function PaymentModal({ isOpen, onClose, registration, onUpdatePayment }:
                   <span className="text-sm font-medium">Dinheiro</span>
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Payment Amount */}
+          {registration.status !== 'confirmed' && (
+            <div className="mb-6">
+              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
+                Valor Pago (R$)
+              </label>
+              <input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                placeholder="100.00"
+              />
+            </div>
+          )}
+
+          {/* Payment Bank */}
+          {registration.status !== 'confirmed' && paymentMethod === 'pix' && (
+            <div className="mb-6">
+              <label htmlFor="bank" className="block text-sm font-medium text-gray-700 mb-2">
+                Banco do PIX
+              </label>
+              <select
+                id="bank"
+                value={paymentBank}
+                onChange={(e) => setPaymentBank(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="">Selecione o banco</option>
+                <option value="Banco do Brasil">Banco do Brasil</option>
+                <option value="Bradesco">Cora</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+          )}
+
+          {/* Show current payment info if confirmed */}
+          {registration.status === 'confirmed' && (registration.payment_amount || registration.payment_bank) && (
+            <div className="mb-6 bg-green-50 rounded-lg p-4">
+              <h4 className="font-medium text-green-800 mb-2">Informações do Pagamento</h4>
+              {registration.payment_amount && (
+                <p className="text-sm text-green-700">
+                  <strong>Valor:</strong> R$ {registration.payment_amount.toFixed(2)}
+                </p>
+              )}
+              {registration.payment_bank && (
+                <p className="text-sm text-green-700">
+                  <strong>Banco:</strong> {registration.payment_bank}
+                </p>
+              )}
             </div>
           )}
 
