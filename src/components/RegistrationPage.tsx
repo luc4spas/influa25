@@ -11,7 +11,7 @@ export function RegistrationPage() {
     email: '',
     phone: '',
     age: '',
-    shirt_size: '',
+    shirt_size: 'M',
     guardian_name: ''
   });
 
@@ -66,17 +66,17 @@ export function RegistrationPage() {
       backgroundRepeat: 'no-repeat'
     }}>
       {/* Overlay escuro para melhor legibilidade */}
-      <div className="absolute inset-0 bg-black/60"></div> 
+      <div className="absolute inset-0 bg-black/60"></div>
 
       {/* Carinhas animadas */}
       <div className="absolute inset-0 pointer-events-none">
         <img 
           src="/carinha.png" 
           alt="" 
-          className="absolute w-42 h-42 opacity-70 animate-float"
+          className="absolute w-12 h-12 opacity-70 animate-float"
           style={{ 
-            top: '50%', 
-            left: '50%',
+            top: '10%', 
+            left: '10%',
             filter: 'drop-shadow(0 0 10px rgba(255, 193, 7, 0.5))'
           }}
         />
@@ -142,7 +142,7 @@ export function RegistrationPage() {
           <div className="text-center">
             <div className="flex items-center justify-center mb-6">
               <img 
-                src="/principal.png" 
+                src="/logo.png" 
                 alt="Influa Conference 2025" 
                 className="h-20 w-auto"
                 style={{ filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))' }}
@@ -251,10 +251,11 @@ export function RegistrationPage() {
                   onChange={handleChange}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
-                  <option value=""></option>
+                  <option value="PP">PP - Extra Pequeno</option>
                   <option value="P">P - Pequeno</option>
                   <option value="M">M - Médio</option>
                   <option value="G">G - Grande</option>
+                  <option value="GG">GG - Extra Grande</option>
                 </select>
               </div>
             </div>

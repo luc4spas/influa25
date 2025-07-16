@@ -327,6 +327,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       // Recalculate total pages after updating data
       get().calculateAndSetTotalPages();
 
+      // Recarregar dados para garantir sincronização
+      await get().fetchRegistrations();
+
     } catch (error) {
       console.error('Erro ao atualizar entrega de camisa:', error);
       throw error;

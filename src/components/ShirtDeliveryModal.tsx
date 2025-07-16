@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { X, Package, PackageCheck } from 'lucide-react';
+import { X, Package, PackageCheck, Shirt } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 interface ShirtDeliveryModalProps {
   isOpen: boolean;
@@ -18,18 +20,55 @@ interface ShirtDeliveryModalProps {
 
 export function ShirtDeliveryModal({ isOpen, onClose, registration, onUpdateDelivery }: ShirtDeliveryModalProps) {
   const [notes, setNotes] = useState<string>(registration.shirt_delivery_notes || '');
+  const [newShirtSize, setNewShirtSize] = useState<string>(registration.shirt_size || 'M');
+  const [sizeChanged, setSizeChanged] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const shirtSizes = [
+    { value: 'PP', label: 'PP - Extra Pequeno' },
+    { value: 'P', label: 'P - Pequeno' },
+    { value: 'M', label: 'M - Médio' },
+    { value: 'G', label: 'G - Grande' },
+    { value: 'GG', label: 'GG - Extra Grande' }
+  ];
+
   if (!isOpen) return null;
+
+  const handleSizeChange = (size: string) => {
+    setNewShirtSize(size);
+    setSizeChanged(size !== registration.shirt_size);
+  };
+
+  const updateShirtSize = async (registrationId: string, size: string) => {
+    try {
+      const { error } = await supabase
+        .from('registrations')
+        .update({ shirt_size: size })
+        .eq('id', registrationId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao atualizar tamanho da camisa:', error);
+      throw error;
+    }
+  };
 
   const handleMarkDelivered = async () => {
     setLoading(true);
     try {
+      // Se o tamanho foi alterado, atualizar primeiro
+      if (sizeChanged) {
+        await updateShirtSize(registration.id, newShirtSize);
+        toast.success(`Tamanho da camisa alterado para ${newShirtSize}`);
+      }
+      
       await onUpdateDelivery(registration.id, true, notes);
       onClose();
       setNotes('');
+      setSizeChanged(false);
     } catch (error) {
       console.error('Erro ao marcar camisa como entregue:', error);
+      toast.error('Erro ao processar entrega da camisa');
     } finally {
       setLoading(false);
     }
@@ -38,11 +77,19 @@ export function ShirtDeliveryModal({ isOpen, onClose, registration, onUpdateDeli
   const handleMarkNotDelivered = async () => {
     setLoading(true);
     try {
+      // Se o tamanho foi alterado, atualizar primeiro
+      if (sizeChanged) {
+        await updateShirtSize(registration.id, newShirtSize);
+        toast.success(`Tamanho da camisa alterado para ${newShirtSize}`);
+      }
+      
       await onUpdateDelivery(registration.id, false, notes);
       onClose();
       setNotes('');
+      setSizeChanged(false);
     } catch (error) {
       console.error('Erro ao marcar camisa como não entregue:', error);
+      toast.error('Erro ao processar alteração da camisa');
     } finally {
       setLoading(false);
     }
@@ -91,6 +138,39 @@ export function ShirtDeliveryModal({ isOpen, onClose, registration, onUpdateDeli
               <p className="text-xs text-gray-500 mt-2">
                 Entregue em: {new Date(registration.shirt_delivery_date).toLocaleDateString('pt-BR')}
               </p>
+            )}
+          </div>
+
+          {/* Shirt Size Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              <div className="flex items-center gap-2">
+                <Shirt className="w-4 h-4" />
+                Tamanho da Camisa
+              </div>
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {shirtSizes.map((size) => (
+                <button
+                  key={size.value}
+                  type="button"
+                  onClick={() => handleSizeChange(size.value)}
+                  className={`p-3 rounded-lg border-2 text-sm font-medium transition-all duration-200 ${
+                    newShirtSize === size.value
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  {size.label}
+                </button>
+              ))}
+            </div>
+            {sizeChanged && (
+              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ Tamanho será alterado de <strong>{registration.shirt_size}</strong> para <strong>{newShirtSize}</strong>
+                </p>
+              </div>
             )}
           </div>
 
