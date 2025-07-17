@@ -36,6 +36,7 @@ interface DashboardStore {
   expenses: Expense[];
   totalRegistrations: number;
   confirmedPayments: number;
+  totalParticipants: number;
   deliveredShirts: number;
   totalRevenue: number;
   totalExpenses: number;
@@ -67,6 +68,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   expenses: [],
   totalRegistrations: 0,
   confirmedPayments: 0,
+  totalParticipants: 0,
   deliveredShirts: 0,
   totalRevenue: 0,
   totalExpenses: 0,
@@ -143,7 +145,10 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       }
 
       const confirmed = data.filter(reg => reg.status === 'confirmed').length;
+      const participated = data.filter(reg => reg.status === 'participated').length;
+      const totalParticipants = confirmed + participated;
       const delivered = data.filter(reg => reg.shirt_delivered === true).length;
+      // Calcular receita apenas de pagamentos confirmados
       const revenue = data
         .filter(reg => reg.status === 'confirmed' && reg.payment_amount)
         .reduce((sum, reg) => sum + (reg.payment_amount || 0), 0);
@@ -152,6 +157,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         registrations: data,
         totalRegistrations: data.length,
         confirmedPayments: confirmed,
+        totalParticipants,
         deliveredShirts: delivered,
         totalRevenue: revenue,
         loading: false
@@ -167,6 +173,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         registrations: [],
         totalRegistrations: 0,
         confirmedPayments: 0,
+        totalParticipants: 0,
         deliveredShirts: 0
       });
     }
@@ -208,7 +215,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       reg.age,
       reg.shirt_size || 'M',
       reg.guardian_name || '',
-      reg.status === 'confirmed' ? 'Confirmado' : 'Pendente',
+      reg.status === 'confirmed' ? 'Confirmado' : reg.status === 'participated' ? 'Vai Pagar Depois' : 'Pendente',
       reg.payment_method || '',
       reg.payment_amount ? `R$ ${reg.payment_amount.toFixed(2)}` : '',
       reg.payment_bank || '',
@@ -270,6 +277,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       );
 
       const confirmed = updatedRegistrations.filter(reg => reg.status === 'confirmed').length;
+      const participated = updatedRegistrations.filter(reg => reg.status === 'participated').length;
+      const totalParticipants = confirmed + participated;
+      // Calcular receita apenas de pagamentos confirmados
       const revenue = updatedRegistrations
         .filter(reg => reg.status === 'confirmed' && reg.payment_amount)
         .reduce((sum, reg) => sum + (reg.payment_amount || 0), 0);
@@ -277,6 +287,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       set({
         registrations: updatedRegistrations,
         confirmedPayments: confirmed,
+        totalParticipants,
         totalRevenue: revenue
       });
 

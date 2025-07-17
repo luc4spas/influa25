@@ -153,6 +153,7 @@ export function Dashboard() {
   }));
 
   const minorsCount = registrations.filter(reg => reg.age < 18).length;
+  const totalParticipants = confirmedPayments + registrations.filter(r => r.status === 'participated').length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-yellow-50 flex flex-col">
@@ -208,13 +209,23 @@ export function Dashboard() {
           {activeSection === 'registrations' ? (
             <>
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 lg:gap-6 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 lg:gap-6 mb-8">
                 <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
                   <div className="flex items-center gap-4">
                     <Users className="w-12 h-12 text-purple-500" />
                     <div>
                       <p className="text-xs lg:text-sm text-gray-600">Total de Registros</p>
                       <p className="text-2xl font-bold text-gray-900">{totalRegistrations}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-emerald-500">
+                  <div className="flex items-center gap-4">
+                    <Users className="w-12 h-12 text-emerald-500" />
+                    <div>
+                      <p className="text-xs lg:text-sm text-gray-600">Total Participantes</p>
+                      <p className="text-2xl font-bold text-gray-900">{confirmedPayments + registrations.filter(r => r.status === 'participated').length}</p>
                     </div>
                   </div>
                 </div>
@@ -328,24 +339,25 @@ export function Dashboard() {
                         <option value="all">Todos os status</option>
                         <option value="pending">Pendente</option>
                         <option value="confirmed">Confirmado</option>
+                        <option value="participated">Participou</option>
                       </select>
 
                       <div className="flex gap-3">
                         <button
-                        onClick={handleRefresh}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg disabled:opacity-50 whitespace-nowrap"
-                      >
-                        <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                        <span className="hidden sm:inline">Atualizar</span>
-                      </button>
+                          onClick={handleRefresh}
+                          disabled={loading}
+                          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg disabled:opacity-50 whitespace-nowrap"
+                        >
+                          <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                          <span className="hidden sm:inline">Atualizar</span>
+                        </button>
                         <button
-                        onClick={exportToCSV}
-                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg whitespace-nowrap"
-                      >
-                        <Download className="w-5 h-5" />
-                        <span className="hidden sm:inline">Exportar</span>
-                      </button>
+                          onClick={exportToCSV}
+                          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg whitespace-nowrap"
+                        >
+                          <Download className="w-5 h-5" />
+                          <span className="hidden sm:inline">Exportar</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -538,9 +550,16 @@ export function Dashboard() {
                               <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                                 registration.status === 'confirmed'
                                   ? 'bg-green-100 text-green-800'
+                                  : registration.status === 'participated'
+                                  ? 'bg-blue-100 text-blue-800'
                                   : 'bg-yellow-100 text-yellow-800'
                               }`}>
-                                {registration.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
+                                {registration.status === 'confirmed' 
+                                  ? 'Confirmado' 
+                                  : registration.status === 'participated'
+                                  ? 'Vai Pagar Depois'
+                                  : 'Pendente'
+                                }
                               </span>
                             </td>
                             <td className="px-4 xl:px-6 py-4">
